@@ -1,0 +1,27 @@
+# ollafleet configuration
+# Define your Ollama nodes here
+
+nodes:
+  - name: corsair
+    host: "http://localhost:11434"
+    tags: [mothership, compute]
+
+  # Uncomment and adjust for your fleet:
+  # - name: mac-studio
+  #   host: "http://100.x.x.x:11434"  # Tailscale IP
+  #   tags: [speed-tier]
+  #
+  # - name: alienware
+  #   host: "http://100.x.x.x:11434"
+  #   tags: [specialist, cuda]
+
+# Default model for chat command
+default_model: "qwen3.5:27b"
+
+# Timeout for API calls (seconds)
+timeout: 15
+
+# Config file location precedence:
+# 1. --config flag
+# 2. ./fleet.yml
+# 3. ~/.config/ollafleet/fleet.yml

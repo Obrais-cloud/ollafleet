@@ -1,0 +1,17 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --extra dev --locked
+      - run: uv run pytest
+      - run: uv run --with pip-audit pip-audit --skip-editable
+      - run: uv run python -m compileall -q src

@@ -1,35 +1,68 @@
 # ollafleet
 
-**Smart proxy making multiple Ollama instances act as one.**
+CLI fleet manager for multiple Ollama instances. One terminal, all your nodes.
 
-Routes each request to the best upstream node for the requested model:
+```
+ollafleet status      # health of every node
+ollafleet models      # all models across the fleet
+ollafleet locate qwen # which nodes have a model?
+ollafleet pull llama3.3 # pull to all nodes at once
+ollafleet chat "why is the sky blue?" # auto-routes to best node
+ollafleet bench       # benchmark tok/s across nodes
+```
 
-| priority | rule |
-|---|---|
-| 1 | nodes that **already have the model loaded** (no cold start) |
-| 2 | nodes that have the model **installed** |
-| 3 | round-robin across all nodes |
-
-Per-node `/api/tags` and `/api/ps` are cached for 30s. Every response carries an `X-Ollafleet-Node` header so you can trace which node served.
+## Install
 
 ```bash
-./ollafleet serve --nodes http://macstudio:11434,http://corsair:11434 \
-                  --listen 127.0.0.1:11455
-# point any Ollama client at http://127.0.0.1:11455 — speaks plain Ollama
-
-./ollafleet status --nodes http://macstudio:11434,http://corsair:11434
-# inventory + loaded models per node, with ● for already-loaded
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e .
 ```
 
-## Where it sits
+## Setup
 
+Create `fleet.yml` (or run `ollafleet init`):
+
+```yaml
+nodes:
+  - name: corsair
+    host: "http://localhost:11434"
+    tags: [mothership, compute]
+
+  - name: mac-studio
+    host: "http://100.x.x.x:11434"
+    tags: [speed-tier]
+
+  - name: alienware
+    host: "http://100.x.x.x:11434"
+    tags: [specialist, cuda]
+
+default_model: "qwen3.5:27b"
+timeout: 15
 ```
-client  →  ollafleet  →  { node A | node B | … }   (each running Ollama)
-```
 
-Slots in front of any other proxy: `client → ollafleet → ollafifo → ollasecret → ollama-on-node-X`.
+Config is searched in order: `./fleet.yml` → `~/.config/ollafleet/fleet.yml`.
 
-Single file, Python stdlib only.
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `status` | Health, version, latency, model count, running models per node |
+| `models` | All models across the fleet with size, params, quantization, loaded state |
+| `locate <model>` | Find which nodes have a specific model |
+| `pull <model>` | Pull a model to all nodes (or `--node` for one) |
+| `chat [prompt]` | Chat with auto-routing to the fastest node that has the model |
+| `bench` | Benchmark tok/s across nodes for a given model |
+| `init` | Generate a starter fleet.yml |
+
+## Flags
+
+- `-c, --config PATH` — explicit config file path
+- `-n, --node NAME` — target a specific node (available on most commands)
+- `-m, --model NAME` — specify model (for chat/bench)
+
+## How it works
+
+All nodes are queried in parallel using async HTTP. Chat auto-routes to the node with the lowest latency that has the requested model. Pull runs concurrently across all nodes.
 
 ## License
 
